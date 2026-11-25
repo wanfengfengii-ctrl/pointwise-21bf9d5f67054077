@@ -48,6 +48,20 @@ class DeviceRepository:
                     OR (state <> 'issued' AND slot IS NULL AND raw IS NULL)
                 )
             );
+            CREATE TABLE IF NOT EXISTS repair_transfers (
+                transfer_id TEXT PRIMARY KEY,
+                shift_id TEXT NOT NULL,
+                device TEXT NOT NULL,
+                start INTEGER NOT NULL CHECK (start >= 0),
+                "end" INTEGER NOT NULL CHECK ("end" >= start),
+                status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'withdrawn')),
+                withdraw_intent INTEGER NOT NULL DEFAULT 0
+                    CHECK (withdraw_intent IN (0, 1)),
+                snapshot TEXT NOT NULL,
+                candidate BLOB NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS device_repair_transfers_by_range
+                ON repair_transfers (device, start, "end");
         ''')
         with self.transaction() as database:
             database.execute(

@@ -32,8 +32,18 @@ def close_shift(database, shift_id: str, *, source: DeviceRepository | None = No
         if previous is not None:
             return CloseResult(publication=previous)
 
-        outcomes = resolve_coverage(database, shift, source)
+        from station.repair_transfer import resolve_transfer_coverage, transfer_for_shift
+
+        transfer = transfer_for_shift(database, shift_id)
+        if transfer is not None and transfer['status'] == 'accepted':
+            outcomes = resolve_transfer_coverage(database, shift)
+        else:
+            outcomes = resolve_coverage(database, shift, source)
         pending = tuple(position.sequence for position in outcomes if position.state == 'waiting')
+        if transfer is not None and transfer['status'] == 'pending':
+            # A live transfer candidate is not authority to sign, even if all
+            # ordinary receipts happen to already be present.
+            return CloseResult(pending=pending)
         if pending:
             return CloseResult(pending=pending)
 

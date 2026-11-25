@@ -28,6 +28,7 @@ def require_integer(value: object, field: str, minimum: int = 0) -> int:
 def open_station(path) -> sqlite3.Connection:
     from station.capture.repository import CaptureRepository
     from station.closeout.repository import StatementRepository
+    from station.repair_transfer import initialize_station_schema
     from station.review.repository import ReviewRepository
     from station.shift.repository import ShiftRepository
 
@@ -39,6 +40,7 @@ def open_station(path) -> sqlite3.Connection:
         CaptureRepository(database).initialize()
         StatementRepository(database).initialize()
         ReviewRepository(database).initialize()
+        initialize_station_schema(database)
     except BaseException:
         database.close()
         raise

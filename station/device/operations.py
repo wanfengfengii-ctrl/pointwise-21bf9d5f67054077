@@ -62,6 +62,11 @@ def issue_in_transaction(repository: DeviceRepository, operation: str) -> Repair
     if previous.state is not RepairState.PENDING:
         return previous
 
+    from station.repair_transfer import device_operation_blocked
+
+    if device_operation_blocked(repository, operation):
+        return previous
+
     sequence = previous.sequence
     image = read_position(repository, sequence)
     if image is not None:

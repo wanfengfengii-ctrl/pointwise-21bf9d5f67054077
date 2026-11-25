@@ -19,4 +19,8 @@ def receive(
     with repository.transaction():
         if operation is not None:
             load_repair_context(database, source, operation, image)
+        else:
+            from station.repair_transfer import assert_direct_intake_allowed
+
+            assert_direct_intake_allowed(database, image)
         return record_receipt(repository, packet, operation)

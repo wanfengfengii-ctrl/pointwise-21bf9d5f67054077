@@ -44,9 +44,12 @@ def request_repair(
     repository = CaptureRepository(database)
     request = StoredRepairRequest(operation, shift_id, device, sequence)
     with repository.transaction():
+        shift = lookup_shift(database, shift_id)
+        from station.repair_transfer import assert_ordinary_request_allowed
+
+        assert_ordinary_request_allowed(database, shift)
         previous = repository.get_request(operation)
         if previous is None:
-            shift = lookup_shift(database, shift_id)
             if not contains_position(shift, device, sequence):
                 raise ValueError('repair position is outside its shift')
             repository.insert_request(request)
@@ -78,7 +81,11 @@ def load_repair_context(
     request = CaptureRepository(database).get_request(operation)
     if request is None or (request.device, request.sequence) != (image.device, image.sequence):
         raise ValueError('repair reply does not match a registered request')
-    if source is None or source.device != request.device:
+    if source is None:
+        from station.repair_transfer import authorize_offline_receive
+
+        return authorize_offline_receive(database, request, image)
+    if source.device != request.device:
         raise ValueError('repair reply requires its source device')
     with source.transaction(write=False):
         facts = repair_facts_for_position(database, source, image.sequence)

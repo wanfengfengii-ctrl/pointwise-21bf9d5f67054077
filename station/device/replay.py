@@ -51,9 +51,14 @@ def _apply_event(repository: DeviceRepository, event: RecordingEvent) -> PollRes
         return PollResult(event, repair=outcome)
     if event.kind == 'reply':
         outcome = query_repair(repository, event.operation)
-        if outcome.state is not RepairState.ISSUED:
-            raise ValueError('reply event requires an issued original')
-        return PollResult(event, image=outcome.image, repair=outcome)
+        if outcome.state is RepairState.ISSUED:
+            return PollResult(event, image=outcome.image, repair=outcome)
+        if outcome.state is RepairState.PENDING:
+            from station.repair_transfer import device_operation_blocked
+
+            if device_operation_blocked(repository, event.operation):
+                return PollResult(event, repair=outcome)
+        raise ValueError('reply event requires an issued original')
     raise ValueError(f'invalid event kind {event.kind!r}')
 
 
